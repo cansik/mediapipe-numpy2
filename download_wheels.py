@@ -62,7 +62,7 @@ def download_file(
     url = file_info['url']
     dest = download_dir / fname
 
-    # 1) if file exists, check its SHA256
+    # if file exists, check its SHA256
     if dest.exists() and expected_sha:
         if sha256_of(dest).lower() == expected_sha.lower():
             progress.update(task_id, advance=1)
@@ -70,7 +70,7 @@ def download_file(
         else:
             dest.unlink()  # bad checksum, force re-download
 
-    # 2) otherwise stream-download with a per-file progress bar
+    # otherwise stream-download with a per-file progress bar
     r = requests.get(url, stream=True)
     r.raise_for_status()
     total = int(r.headers.get('Content-Length', 0))
