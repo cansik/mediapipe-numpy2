@@ -1,0 +1,66 @@
+name: Patch and Release Mediapipe Wheels
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Mediapipe version to download (e.g. 0.10.21 or "latest")'
+        required: false
+        default: 'latest'
+      prerelease:
+        description: 'Mark the GitHub release as a prerelease?'
+        required: false
+        default: 'false'
+      label:
+        description: 'Additional label suffix for tag/release name (e.g. "-beta")'
+        required: false
+        default: ''
+
+jobs:
+  patch-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade wheel setuptools requests rich
+
+      - name: Make patch scripts executable
+        run: |
+          chmod +x download_wheels.py patch_mp_wheels.sh
+
+      - name: Resolve version
+        id: resolve_version
+        run: |
+          if [ "${{ github.event.inputs.version }}" = "latest" ]; then
+            version=$(python -c "import download_wheels; print(download_wheels.get_latest_version())")
+          else
+            version="${{ github.event.inputs.version }}"
+          fi
+          echo "version=$version" >> $GITHUB_OUTPUT
+
+      - name: Download and patch wheels
+        run: |
+          ./patch_mp_wheels.sh
+        env:
+          VERSION: ${{ steps.resolve_version.outputs.version }}
+
+      - name: Upload binaries to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: patched_wheels/*.whl
+          file_glob: true
+          tag: "${{ steps.resolve_version.outputs.version }}${{ github.event.inputs.label }}"
+          release_name: "mediapipe-numpy2 ${{ steps.resolve_version.outputs.version }}${{ github.event.inputs.label }}"
+          body: |
+            Patched mediapipe-numpy2 wheel packages for version ${{ steps.resolve_version.outputs.version }}${{ github.event.inputs.label }}.
+          overwrite: true
+          prerelease: ${{ github.event.inputs.prerelease }}
