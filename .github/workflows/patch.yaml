@@ -34,7 +34,7 @@ jobs:
 
       - name: Make patch scripts executable
         run: |
-          chmod +x download_wheels.py patch_mp_wheels.sh
+          chmod +x download_wheels.py patch_wheels.sh
 
       - name: Resolve version
         id: resolve_version
