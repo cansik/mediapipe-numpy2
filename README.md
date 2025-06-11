@@ -11,11 +11,7 @@ The official mediapipe Python wheels published on PyPI include a strict dependen
 Requires-Dist: numpy<2
 ```
 
-This prevents installation or use of mediapipe with `numpy` version 2 or higher.
-
-This constraint is problematic for users and downstream projects who want to use the latest `numpy` (
-see [mediapipe issue #5612](https://github.com/google-ai-edge/mediapipe/issues/5612)).  
-As of now, mediapipe works with `numpy` 2.x, but the PyPI wheels block installation.
+This prevents installation or use of mediapipe with `numpy` version 2 or higher.  This constraint is problematic for users and downstream projects who want to use the latest `numpy` (see [mediapipe issue #5612](https://github.com/google-ai-edge/mediapipe/issues/5612)). As of now, mediapipe seems to work with `numpy` 2.x, but the PyPI wheels block installation.
 
 ### What does this repository do?
 
