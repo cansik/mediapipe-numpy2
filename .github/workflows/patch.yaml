@@ -1,4 +1,4 @@
-name: Patch and Release Mediapipe Wheels
+name: Patch Mediapipe Wheels
 
 on:
   workflow_dispatch:
