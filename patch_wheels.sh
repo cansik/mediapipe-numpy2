@@ -41,53 +41,56 @@ process_wheel() {
   rm -rf "$TMP_DIR"
   mkdir -p "$TMP_DIR"
 
-  # unpack
+  # derive original suffix from wheel filename, e.g.
+  # mediapipe-0.10.21-cp310-cp310-macosx_11_0_universal2 → 0.10.21-cp310-cp310-macosx_11_0_universal2
   local base="$(basename "$wheel" .whl)"
+  local suffix="${base#mediapipe-}"
+
+  # unpack
   local unpack_dir="$TMP_DIR/$base"
   mkdir -p "$unpack_dir"
   unzip -qq "$wheel" -d "$unpack_dir"
 
-  # find the directory it unpacked into
+  # locate & rename the .dist-info directory
   local distinfo
   distinfo=$(find "$unpack_dir" -maxdepth 1 -type d -name "mediapipe-*.dist-info" | head -1)
   if [[ -z "$distinfo" ]]; then
     echo "ERROR: cannot find .dist-info for $wheel" >&2
     return 1
   fi
+  # extract version and rename dist-info folder
+  local ver="${distinfo##*/mediapipe-}"
+  ver="${ver%.dist-info}"
+  local new_distinfo="$unpack_dir/mediapipe_numpy2-${ver}.dist-info"
+  mv "$distinfo" "$new_distinfo"
+  local meta="$new_distinfo/METADATA"
 
-  # metadata file path
-  local meta="$distinfo/METADATA"
-
-  # remove the numpy<2 constraint, then ensure a bare numpy requirement
-  sed '/^Requires-Dist: numpy<2$/d' "$meta" > "$meta.tmp"
-  mv "$meta.tmp" "$meta"
+  # remove numpy<2, ensure plain numpy, patch Name and Home-page
+  sed '/^Requires-Dist: numpy<2$/d' "$meta" > "$meta.tmp" && mv "$meta.tmp" "$meta"
   if ! grep -q '^Requires-Dist: numpy$' "$meta"; then
     echo "Requires-Dist: numpy" >> "$meta"
   fi
-
-# patch Name and Home-page
   sed -i.bak \
     -e 's/^Name: mediapipe$/Name: mediapipe-numpy2/' \
     -e 's|^Home-page: .*|Home-page: https://github.com/cansik/mediapipe-numpy2|' \
     "$meta"
   rm -f "$meta.bak"
 
-    # repack into a dedicated temp directory
+  # repack into a dedicated temp directory
   local pack_dir="$TMP_DIR/pack"
   rm -rf "$pack_dir"
   mkdir -p "$pack_dir"
   python3 -m wheel pack "$unpack_dir" -d "$pack_dir"
 
-  # there will be exactly one mediapipe-*.whl in $pack_dir
-  local built
-  built=("$pack_dir"/mediapipe-*.whl)
+  # move the rebuilt wheel into OUTPUT_DIR, using the original suffix
+  local built=("$pack_dir"/*.whl)
+  if [[ ${#built[@]} -ne 1 ]]; then
+    echo "ERROR: expected exactly one rebuilt wheel in $pack_dir but found ${#built[@]}" >&2
+    return 1
+  fi
 
-  # extract just the suffix after "mediapipe-"
-  local suffix="${built[0]##*/mediapipe-}"
-
-  # move & rename into the final output dir
   mkdir -p "$OUTPUT_DIR"
-  mv "${built[0]}" "$OUTPUT_DIR/mediapipe_numpy2-${suffix}"
+  mv "${built[0]}" "$OUTPUT_DIR/mediapipe_numpy2-${suffix}.whl"
 }
 
 main() {
