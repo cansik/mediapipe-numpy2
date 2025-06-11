@@ -48,7 +48,7 @@ jobs:
 
       - name: Download and patch wheels
         run: |
-          ./patch_mp_wheels.sh
+          ./patch_wheels.sh
         env:
           VERSION: ${{ steps.resolve_version.outputs.version }}
 
