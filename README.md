@@ -3,9 +3,7 @@
 A patching tool to remove the `numpy<2` constraint from
 official [mediapipe](https://github.com/google-ai-edge/mediapipe) wheels.
 
----
-
-## Why does this repository exist?
+### Why does this repository exist?
 
 The official mediapipe Python wheels published on PyPI include a strict dependency:
 
@@ -19,9 +17,7 @@ This constraint is problematic for users and downstream projects who want to use
 see [mediapipe issue #5612](https://github.com/google-ai-edge/mediapipe/issues/5612)).  
 As of now, mediapipe works with `numpy` 2.x, but the PyPI wheels block installation.
 
----
-
-## What does this repository do?
+### What does this repository do?
 
 This repository provides a script (`patch_wheels.sh`) that:
 
@@ -31,9 +27,8 @@ This repository provides a script (`patch_wheels.sh`) that:
 - Updates the wheel metadata to reference this repository.
 - Rebuilds and outputs patched wheels that can be installed alongside `numpy>=2`.
 
----
 
-## Usage
+### Usage
 
 1. **Clone this repository:**
    ```sh
@@ -59,9 +54,7 @@ This repository provides a script (`patch_wheels.sh`) that:
    pip install ./patched_wheels/mediapipe_numpy2-*.whl
    ```
 
----
-
-## Notes
+### Notes
 
 - The patched wheels are named `mediapipe-numpy2` to avoid clashing with the official package.
 - This repository is not affiliated with the official mediapipe project.
