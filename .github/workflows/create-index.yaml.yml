@@ -1,0 +1,59 @@
+name: Build & Publish pip Simple Index
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+
+jobs:
+  publish-index:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout default branch
+        uses: actions/checkout@v4
+
+      - name: Generate pip simple index
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const { owner, repo } = context.repo;
+            // 1. List all releases
+            const releases = await github.rest.repos.listReleases({ owner, repo });
+            const pkgs = {};
+            // 2. Collect wheel URLs by package
+            for (const r of releases.data) {
+              for (const a of r.assets) {
+                if (a.name.endsWith('.whl')) {
+                  const name = a.name.split('-')[0].toLowerCase();
+                  pkgs[name] = pkgs[name] || [];
+                  pkgs[name].push({ url: a.browser_download_url, file: a.name });
+                }
+              }
+            }
+            // 3. Build directories & HTML
+            fs.mkdirSync('simple', { recursive: true });
+            let indexHtml = '<!DOCTYPE html><html><body>\\n';
+            for (const name of Object.keys(pkgs).sort()) {
+              indexHtml += `<a href="./${name}/">${name}</a><br>\\n`;
+              const dir = `simple/${name}`;
+              fs.mkdirSync(dir, { recursive: true });
+              let pkgHtml = '<!DOCTYPE html><html><body>\\n';
+              for (const f of pkgs[name]) {
+                pkgHtml += `<a href="${f.url}#${f.file}">${f.file}</a><br>\\n`;
+              }
+              pkgHtml += '</body></html>\\n';
+              fs.writeFileSync(`${dir}/index.html`, pkgHtml);
+            }
+            indexHtml += '</body></html>\\n';
+            fs.writeFileSync('simple/index.html', indexHtml);
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: simple
+
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
