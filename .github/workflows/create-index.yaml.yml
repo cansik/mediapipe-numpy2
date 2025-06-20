@@ -1,59 +1,65 @@
-name: Build & Publish pip Simple Index
+name: Build & Deploy pip Simple Index
 
 on:
   workflow_dispatch:
 
 permissions:
-  contents: write
-  pages: write
+  contents: write    # for checkout and uploading artifacts
+  pages: write       # to deploy GitHub Pages
+  id-token: write    # to mint an OIDC token for deploy-pages
 
 jobs:
   publish-index:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout default branch
+      # 1. Check out the default branch so we have repo context
+      - name: Checkout repository
         uses: actions/checkout@v4
 
+      # 2. Generate PEP 503 “simple” index from release assets
       - name: Generate pip simple index
         uses: actions/github-script@v6
         with:
           script: |
             const fs = require('fs');
             const { owner, repo } = context.repo;
-            // 1. List all releases
+            // Fetch all releases via the GitHub API
             const releases = await github.rest.repos.listReleases({ owner, repo });
-            const pkgs = {};
-            // 2. Collect wheel URLs by package
-            for (const r of releases.data) {
-              for (const a of r.assets) {
-                if (a.name.endsWith('.whl')) {
-                  const name = a.name.split('-')[0].toLowerCase();
-                  pkgs[name] = pkgs[name] || [];
-                  pkgs[name].push({ url: a.browser_download_url, file: a.name });
+            const packages = {};
+            // Collect all .whl asset URLs, grouped by package name
+            for (const release of releases.data) {
+              for (const asset of release.assets) {
+                if (asset.name.endsWith('.whl')) {
+                  const pkg = asset.name.split('-')[0].toLowerCase();
+                  packages[pkg] = packages[pkg] || [];
+                  packages[pkg].push({ url: asset.browser_download_url, name: asset.name });
                 }
               }
             }
-            // 3. Build directories & HTML
+            // Build the /simple/ HTML structure
             fs.mkdirSync('simple', { recursive: true });
-            let indexHtml = '<!DOCTYPE html><html><body>\\n';
-            for (const name of Object.keys(pkgs).sort()) {
-              indexHtml += `<a href="./${name}/">${name}</a><br>\\n`;
-              const dir = `simple/${name}`;
-              fs.mkdirSync(dir, { recursive: true });
-              let pkgHtml = '<!DOCTYPE html><html><body>\\n';
-              for (const f of pkgs[name]) {
-                pkgHtml += `<a href="${f.url}#${f.file}">${f.file}</a><br>\\n`;
+            let rootHtml = '<!DOCTYPE html><html><body>\n';
+            for (const pkg of Object.keys(packages).sort()) {
+              rootHtml += `<a href="./${pkg}/">${pkg}</a><br>\n`;
+              const pkgDir = `simple/${pkg}`;
+              fs.mkdirSync(pkgDir, { recursive: true });
+              let pkgHtml = '<!DOCTYPE html><html><body>\n';
+              for (const file of packages[pkg]) {
+                pkgHtml += `<a href="${file.url}#${file.name}">${file.name}</a><br>\n`;
               }
-              pkgHtml += '</body></html>\\n';
-              fs.writeFileSync(`${dir}/index.html`, pkgHtml);
+              pkgHtml += '</body></html>\n';
+              fs.writeFileSync(`${pkgDir}/index.html`, pkgHtml);
             }
-            indexHtml += '</body></html>\\n';
-            fs.writeFileSync('simple/index.html', indexHtml);
+            rootHtml += '</body></html>\n';
+            fs.writeFileSync('simple/index.html', rootHtml);
 
+      # 3. Package the generated index for Pages
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: simple
 
+      # 4. Deploy the artifact to GitHub Pages
       - name: Deploy to GitHub Pages
         uses: actions/deploy-pages@v4
