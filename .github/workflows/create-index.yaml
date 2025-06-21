@@ -1,0 +1,73 @@
+name: Build & Deploy pip Simple Index
+
+on:
+  release:
+    types: [ published ]
+  workflow_dispatch:
+
+permissions:
+  contents: write    # for checkout and uploading artifacts
+  pages: write       # to deploy GitHub Pages
+  id-token: write    # to mint an OIDC token for deploy-pages
+
+jobs:
+  publish-index:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Check out default branch
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Generate PEP 503 “simple” index from all .whl assets
+      - name: Generate pip simple index
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const { owner, repo } = context.repo;
+            // 1) Fetch all releases
+            const releases = await github.rest.repos.listReleases({ owner, repo, per_page: 100 });
+            const packages = {};
+            // 2) Gather wheel URLs, group by "normalized" package name
+            for (const rel of releases.data) {
+              for (const asset of rel.assets) {
+                if (asset.name.endsWith('.whl')) {
+                  // take first segment, lowercase, underscores → hyphens
+                  const raw = asset.name.split('-')[0].toLowerCase();
+                  const pkg = raw.replace(/_/g, '-');
+                  packages[pkg] = packages[pkg] || [];
+                  packages[pkg].push({ url: asset.browser_download_url, name: asset.name });
+                }
+              }
+            }
+            // 3) Build 'simple/' directory tree
+            fs.rmSync('simple', { recursive: true, force: true });
+            fs.mkdirSync('simple', { recursive: true });
+            // Root index.html
+            let root = '<!DOCTYPE html><html><body>\n';
+            for (const pkg of Object.keys(packages).sort()) {
+              root += `<a href="./${pkg}/">${pkg}</a><br>\n`;
+              // per-package page
+              const dir = `simple/${pkg}`;
+              fs.mkdirSync(dir, { recursive: true });
+              let page = '<!DOCTYPE html><html><body>\n';
+              for (const f of packages[pkg]) {
+                // fragment "#filename" ensures pip sees the correct wheel name
+                page += `<a href="${f.url}#${f.name}">${f.name}</a><br>\n`;
+              }
+              page += '</body></html>\n';
+              fs.writeFileSync(`${dir}/index.html`, page);
+            }
+            root += '</body></html>\n';
+            fs.writeFileSync('simple/index.html', root);
+
+      # 3. Package the 'simple/' folder for Pages
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: simple
+
+      # 4. Deploy to GitHub Pages
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
