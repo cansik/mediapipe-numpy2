@@ -65,14 +65,21 @@ process_wheel() {
   mv "$distinfo" "$new_distinfo"
   local meta="$new_distinfo/METADATA"
 
-  # remove numpy<2, ensure plain numpy, patch Name and Home-page
-  sed '/^Requires-Dist: numpy<2$/d' "$meta" > "$meta.tmp" && mv "$meta.tmp" "$meta"
-  if ! grep -q '^Requires-Dist: numpy$' "$meta"; then
-    echo "Requires-Dist: numpy" >> "$meta"
+  # detect line ending style
+  if grep -q $'\r' "$meta"; then
+    EOL=$'\r\n'
+  else
+    EOL=$'\n'
   fi
-  sed -i.bak \
-    -e 's/^Name: mediapipe$/Name: mediapipe-numpy2/' \
-    -e 's|^Home-page: .*|Home-page: https://github.com/cansik/mediapipe-numpy2|' \
+
+  # remove numpy<2 (handle optional CR), ensure plain numpy, patch Name and Home-page preserving original EOL
+  sed -i.bak -E '/^Requires-Dist: numpy<2(\r)?$/d' "$meta"
+  if ! grep -q -E '^Requires-Dist: numpy(\r)?$' "$meta"; then
+    printf "Requires-Dist: numpy%s" "$EOL" >> "$meta"
+  fi
+  sed -i.bak -E \
+    -e 's/^(Name: mediapipe)(\r)?$/\1-numpy2\2/' \
+    -e 's|^(Home-page: ).*(\r)?$|\1https://github.com/cansik/mediapipe-numpy2\2|' \
     "$meta"
   rm -f "$meta.bak"
 
