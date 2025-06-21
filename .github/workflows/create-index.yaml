@@ -1,4 +1,4 @@
-name: Build & Deploy pip Simple Index
+name: Create Simple pip Index
 
 on:
   release:
