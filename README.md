@@ -1,5 +1,7 @@
 # mediapipe-numpy2 
-[![Patch Wheels](https://github.com/cansik/mediapipe-numpy2/actions/workflows/patch.yaml/badge.svg)](https://github.com/cansik/mediapipe-numpy2/actions/workflows/patch.yaml) [![Test](https://github.com/cansik/mediapipe-numpy2/actions/workflows/test-mediapipe-numpy2.yaml/badge.svg)](https://github.com/cansik/mediapipe-numpy2/actions/workflows/test-mediapipe-numpy2.yaml)
+[![Patch Wheels](https://github.com/cansik/mediapipe-numpy2/actions/workflows/patch.yaml/badge.svg)](https://github.com/cansik/mediapipe-numpy2/actions/workflows/patch.yaml)
+[![Test](https://github.com/cansik/mediapipe-numpy2/actions/workflows/test-mediapipe-numpy2.yaml/badge.svg)](https://github.com/cansik/mediapipe-numpy2/actions/workflows/test-mediapipe-numpy2.yaml)
+[![PyPI](https://img.shields.io/pypi/v/mediapipe-numpy2)](https://pypi.org/project/mediapipe-numpy2/)
 
 A patching tool to remove the `numpy<2` constraint from
 official [mediapipe](https://github.com/google-ai-edge/mediapipe) wheels.
@@ -29,7 +31,7 @@ This repository provides a script (`patch_wheels.sh`) that:
 To use `mediapipe` with `numpy>=2`, install the pre-patched wheels from the releases as a drop-in replacement:
 
 ```bash
-pip install mediapipe-numpy2 --extra-index-url https://cansik.github.io/mediapipe-numpy2/
+pip install mediapipe-numpy2
 ```
 
 Then import `mediapipe` as you normally would:
